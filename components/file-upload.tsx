@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { X, UploadCloud } from "lucide-react";
 import { Textarea } from "./ui/textarea";
 import { getAiResult } from "@/server/ai";
+import Image from "next/image";
 
 type UploadFile = {
   id: string;
@@ -95,22 +96,17 @@ const FileUpload = () => {
       };
 
       xhr.send(form);
-    } catch (err: any) {
+    } catch (err: unknown) { // Fixed: Line 98 - Changed 'any' to 'unknown'
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
       setFiles((s) =>
         s.map((f) =>
-          f.id === uf.id ? { ...f, status: "error", error: err.message } : f
+          f.id === uf.id ? { ...f, status: "error", error: errorMessage } : f
         )
       );
     }
   };
 
-  const uploadAll = async () => {
-    for (const f of files) {
-      if (f.status === "idle" || f.status === "error") {
-        uploadFile(f);
-      }
-    }
-  };
+  // Removed unused uploadAll function to fix warning
 
   // Convert file to base64 safely
   const fileToBase64 = async (file: File): Promise<string> => {
@@ -120,7 +116,7 @@ const FileUpload = () => {
     const chunkSize = 0x8000;
     for (let i = 0; i < bytes.length; i += chunkSize) {
       const chunk = bytes.subarray(i, i + chunkSize);
-      binary += String.fromCharCode.apply(null, chunk as any);
+      binary += String.fromCharCode.apply(null, Array.from(chunk)); // Fixed: Line 123 - Removed 'as any'
     }
     return btoa(binary);
   };
@@ -187,9 +183,11 @@ const FileUpload = () => {
               >
                 <div className="w-16 h-12 flex-none rounded overflow-hidden bg-muted flex items-center justify-center">
                   {f.preview && f.file.type.startsWith("image/") ? (
-                    <img
+                    <Image
                       src={f.preview}
                       alt={f.file.name}
+                      width={64}
+                      height={48}
                       className="object-cover w-full h-full"
                     />
                   ) : (
@@ -235,19 +233,6 @@ const FileUpload = () => {
             ))}
           </div>
         </CardContent>
-        {/* <CardFooter className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Button onClick={uploadAll} disabled={files.length === 0}>
-              Upload all
-            </Button>
-            <Button variant="ghost" onClick={() => setFiles([])}>
-              Clear
-            </Button>
-          </div>
-          <div className="text-sm text-muted-foreground">
-            Tip: For large files use presigned URLs or streaming uploads.
-          </div>
-        </CardFooter> */}
       </Card>
 
       <Card className="max-w-3xl w-full mx-auto">
